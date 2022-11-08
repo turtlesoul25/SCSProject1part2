@@ -1,0 +1,44 @@
+---
+title: "Statistical Case Studies - Project 1 part 2"
+author: "Georgia Ettles, Mayez Haris and Niharika Peddinenikalva"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(gridExtra)
+library(countrycode)
+```
+
+# Load data
+
+```{r easyshare}
+load("easySHARE_rel8_0_0.rda")
+data <- easySHARE_rel8_0_0
+
+```
+
+```{r}
+# Set missing values to NA       
+data[data < 0] <- NA
+
+# Replace country codes with country names
+data$country_mod <- countrycode(factor(data$country_mod),
+  origin = "iso3n",
+  destination = "country.name"
+)
+
+length(unique(data$mergeid))
+table(data$wave,data$int_year)
+table(data$country_mod, data$wave)
+```
+
+
+
+
+
