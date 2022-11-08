@@ -9,6 +9,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+set.seed(1234)
 library(ggplot2)
 library(tidyverse)
 library(gridExtra)
@@ -184,10 +185,10 @@ levels(data$ep005_) <- list(
 )
 
 levels(data$bmi2) <- list(
-  "Underweight" = as.character(1),
-  "Normal" = as.character(2),
-  "Overweight" = as.character(3),
-  "Obese" = as.character(4)
+  "_Underweight" = as.character(1),
+  "_Normal" = as.character(2),
+  "_Overweight" = as.character(3),
+  "_Obese" = as.character(4)
 )
 
 ```
@@ -199,6 +200,42 @@ working_data <- data %>%
 
 summary(working_data$cogscore)
 vis_miss(working_data)
+
+# Removing 200 observations to get training data
+del_ind <- sample.int(nrow(working_data), 200)
+training_data <- working_data[-del_ind, ]
+test_data <- working_data[del_ind, ]
+```
+
+```{r}
+# Display summary statistics
+summary(training_data)
+
+# par(mfrow = c(13, 2))
+# Box plots to show how BMI varies across different variables
+boxplot(cogscore ~ age, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ female, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ dn004_mod, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ iv009_mod, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ isced1997_r, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ mar_stat, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ hhsize, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ ch001_, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ sp002_mod, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ chronic_mod, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ casp, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ eurod, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ hc002_mod, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ hc012_, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ hc029_, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ iadlza, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ adla, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ maxgrip, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ bmi2, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ ever_smoked, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ br015_, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ ep005_, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ co007_, data = working_data, ylab = "Composite Cognitive score")
 ```
 
 
@@ -210,7 +247,7 @@ vis_miss(working_data)
 mod <- cogscore ~ . 
 
 # Define model
-fit <- lm(mod, data = working_data)
+fit <- lm(mod, data = na.omit(training_data))
 
 # Display model assumptions through residuals
 par(mfrow = c(2, 2))
