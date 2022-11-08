@@ -13,6 +13,7 @@ library(ggplot2)
 library(tidyverse)
 library(gridExtra)
 library(countrycode)
+library(visdat)
 ```
 
 # Load data
@@ -22,6 +23,28 @@ load("easySHARE_rel8_0_0.rda")
 data <- easySHARE_rel8_0_0
 
 ```
+
+
+
+```{r}
+cogvars <- c("recall_1", "recall_2", "orienti", "numeracy_1", "numeracy_2")
+cog = data[cogvars]
+
+numeracy = rep(NA,dim(cog)[1])
+numeracy[cog$numeracy_1 >= 0 & cog$numeracy_2 >= 0] = (cog$numeracy_1[cog$numeracy_1 >= 0 & cog$numeracy_2 >= 0] + cog$numeracy_2[cog$numeracy_1 >= 0 & cog$numeracy_2 >= 0] )/2
+numeracy[cog$numeracy_1 >= 0 & cog$numeracy_2 < 0] = cog$numeracy_1[cog$numeracy_1 >= 0 & cog$numeracy_2 < 0]
+numeracy[cog$numeracy_1 < 0 & cog$numeracy_2 >= 0] = cog$numeracy_2[cog$numeracy_1 < 0 & cog$numeracy_2 >= 0]
+cog$numeracy = numeracy
+
+cogscore = rep(NA,dim(cog)[1])
+ind = cog$recall_1 >= 0 & cog$recall_2 >= 0 & cog$orienti >= 0 & !is.na(numeracy)
+cogscore[ind] = cog$recall_1[ind] + cog$recall_2[ind] +  cog$orienti[ind] + cog$numeracy[ind]
+cog$cogscore = cogscore
+
+data$cogscore<-cog$cogscore
+
+```
+
 
 ```{r}
 # Set missing values to NA       
@@ -38,7 +61,22 @@ table(data$wave,data$int_year)
 table(data$country_mod, data$wave)
 ```
 
+```{r}
+variable_list <- c("female", "age", "dn004_mod", "iv009_mod", "isced1997_r",
+                   "mar_stat", "hhsize", "mother_alive", "father_alive", "ch001_",
+                   "sp002_mod", "chronic_mod", "casp", "eurod", "hc002_mod", "hc012_", 
+                   "hc029_" , "iadlza", "adla" , "maxgrip", "bmi2", 
+                   "ever_smoked", "br015_", "ep005_", "co007_")
 
+working_data <- data %>% 
+  filter(wave == 4, country_mod == "Estonia") %>% 
+  select(all_of(variable_list), "cogscore")
 
+summary(working_data$cogscore)
+vis_miss(working_data)
+```
 
+```{r}
+summary(working_data)
+```
 
