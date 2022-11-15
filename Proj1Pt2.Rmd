@@ -267,8 +267,41 @@ plot(fit)
 better_fit <- step(fit, trace = F)
 summary(better_fit)
 plot(better_fit)
+confint(better_fit)
 ```
 
 
 
+```{r set-up-scores}
+compute_se <- function(model, test_data) {
+  predicted_vals <- predict(model, newdata = test_data)
+  se_scores <- (predicted_vals - test_data$cogscore)**2
+  rmse_score <- sqrt(mean(se_scores))
+  rmse_score
+}
+
+# Test data same as training data
+test1 <- na.omit(training_data)
+
+# Test data is removed data
+test2 <- na.omit(del_data)
+
+# Test data is same wave (4) different country (Austria)
+test3 <- data %>% 
+  filter(wave == 4, country_mod == "Austria") %>% 
+  select(all_of(variable_list), "cogscore")
+
+# Test data is same country (Estonia) different wave (6)
+test4 <- data %>% 
+  filter(wave == 6, country_mod == "Estonia") %>% 
+  select(all_of(variable_list), "cogscore")
+```
+
+```{r calc-scores}
+compute_se(model = fit, test_data = test1)
+compute_se(model = fit, test_data = test2)
+compute_se(model = fit, test_data = na.omit(test3))
+compute_se(model = fit, test_data = na.omit(test4))
+
+```
 
