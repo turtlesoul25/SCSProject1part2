@@ -69,10 +69,10 @@ variable_list <- c("female", "age", "dn004_mod", "iv009_mod", "isced1997_r",
                    "hc029_" , "iadlza", "adla" , "maxgrip", "bmi2", 
                    "ever_smoked", "br015_", "ep005_", "co007_")
 
-binary_list <- c("female",  "dn004_mod", "mar_stat", "sp002_mod",  
+binary_list <- c("female",  "dn004_mod", "sp002_mod",  
                  "hc012_", "hc029_" , "ever_smoked")
 
-categorical_list <- c("iv009_mod", "isced1997_r", "hhsize", "ch001_", "chronic_mod", 
+categorical_list <- c("iv009_mod", "isced1997_r", "mar_stat", "hhsize", "ch001_", "chronic_mod", 
                      "casp", "eurod", "hc002_mod", "iadlza", "adla" , "maxgrip", 
                      "bmi2", "br015_", "ep005_", "co007_")
 
@@ -191,6 +191,12 @@ levels(data$bmi2) <- list(
   "_Obese" = as.character(4)
 )
 
+levels(data$mar_stat) <- list(
+  "Married" = as.character(1),
+  "Unmarried" = as.character(c(0,4)),
+  "Widowed" = as.character(6),
+  "Divorced/Separated" = as.character(c(2,3,5))
+)
 ```
 
 ```{r}
@@ -204,7 +210,7 @@ vis_miss(working_data)
 # Removing 200 observations to get training data
 del_ind <- sample.int(nrow(working_data), 200)
 training_data <- working_data[-del_ind, ]
-test_data <- working_data[del_ind, ]
+del_data <- working_data[del_ind, ]
 ```
 
 ```{r}
@@ -244,7 +250,11 @@ boxplot(cogscore ~ co007_, data = working_data, ylab = "Composite Cognitive scor
 
 ```{r}
 # Define model formula that applies to both will be applied to both males and females
-mod <- cogscore ~ . 
+mod <- cogscore ~ female + age + dn004_mod + iv009_mod + isced1997_r +
+  hhsize + sp002_mod + chronic_mod + casp + eurod + hc002_mod + hc012_ + hc029_ +
+  iadlza + adla + maxgrip + br015_ + ep005_ + co007_ + female:age + 
+  iv009_mod:sp002_mod  + hhsize:co007_ + age:hc002_mod + hc029_:iadlza
+
 
 # Define model
 fit <- lm(mod, data = na.omit(training_data))
@@ -253,6 +263,12 @@ fit <- lm(mod, data = na.omit(training_data))
 par(mfrow = c(2, 2))
 plot(fit)
 
-summary(fit)
+# Add trace=F to not print each step of the step function
+better_fit <- step(fit, trace = F)
+summary(better_fit)
+plot(better_fit)
 ```
+
+
+
 
