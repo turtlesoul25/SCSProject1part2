@@ -23,6 +23,21 @@ library(visdat)
 load("easySHARE_rel8_0_0.rda")
 data <- easySHARE_rel8_0_0
 
+
+data <- data %>% rename(
+  native = dn004_mod,
+  loc = iv009_mod,
+  edu = isced1997_r,
+  outside_help = sp002_mod,
+  life_qual = casp,
+  doc_vis = hc002_mod,
+  hosp_stay = hc012_,
+  nursing = hc029_,
+  vig_act = br015_,
+  job_situ = ep005_,
+  ends_meet = co007_
+)
+
 ```
 
 
@@ -63,18 +78,18 @@ table(data$country_mod, data$wave)
 ```
 
 ```{r vars}
-variable_list <- c("female", "age", "dn004_mod", "iv009_mod", "isced1997_r",
-                   "mar_stat", "hhsize", "ch001_", "sp002_mod", "chronic_mod", 
-                   "casp", "eurod", "hc002_mod", "hc012_", 
-                   "hc029_" , "iadlza", "adla" , "maxgrip", "bmi2", 
-                   "ever_smoked", "br015_", "ep005_", "co007_")
+variable_list <- c("female", "age", "native", "loc", "edu",
+                    "hhsize", "ch001_", "outside_help", "chronic_mod", 
+                   "life_qual", "eurod", "doc_vis", "hosp_stay", 
+                   "nursing" , "iadlza", "adla" , "maxgrip", "bmi2", 
+                   "ever_smoked", "vig_act", "job_situ", "ends_meet")
 
-binary_list <- c("female",  "dn004_mod", "sp002_mod",  
-                 "hc012_", "hc029_" , "ever_smoked")
+binary_list <- c("female",  "native", "outside_help",  
+                 "hosp_stay", "nursing" , "ever_smoked")
 
-categorical_list <- c("iv009_mod", "isced1997_r", "mar_stat", "hhsize", "ch001_", "chronic_mod", 
-                     "casp", "eurod", "hc002_mod", "iadlza", "adla" , "maxgrip", 
-                     "bmi2", "br015_", "ep005_", "co007_")
+categorical_list <- c("loc", "edu", "mar_stat", "hhsize", "ch001_", "chronic_mod", 
+                     "life_qual", "eurod", "doc_vis", "iadlza", "adla" , "maxgrip", 
+                     "bmi2", "vig_act", "job_situ", "ends_meet")
 
 nonfactor_list <- c("age")
 
@@ -84,10 +99,10 @@ nonfactor_list <- c("age")
 ```{r factoring}
 # Factoring binary variables as dummy variables
 for (column in binary_list) {
-  if (column != "hc029_") {
+  if (column != "nursing") {
     data[, column] <- ifelse(data[, column] == "1", 1, 0)
   } else {
-    data$hc029_ <- ifelse(data[, column] == "5", 0, 1)
+    data$nursing <- ifelse(data[, column] == "5", 0, 1)
   }
   data[, column] <- factor(data[, column], levels = c(0, 1), labels = c("No", "Yes"))
 }
@@ -99,7 +114,7 @@ for (column in categorical_list) {
 }
 
 # Simplifying levels for specific variables
-levels(data$isced1997_r) <- list(
+levels(data$edu) <- list(
   "Secondary and Below" = as.character(0:3),
   "Post Secondary" = as.character(4:6),
   "Other" = as.character(95:96)
@@ -113,7 +128,7 @@ levels(data$eurod) <- list(
 )
 
 
-levels(data$iv009_mod) <- list(
+levels(data$loc) <- list(
   "City_sub" = as.character(1:2),
   "Town_rural" = as.character(3:5)
 )
@@ -146,12 +161,12 @@ levels(data$iadlza) <- list(
   "High Difficulty" = as.character(3:5)
 )
 
-levels(data$br015_) <- list(
+levels(data$vig_act) <- list(
   "Often" = as.character(1:2),
   "Rarely" = as.character(3:4)
 )
 
-levels(data$co007_) <- list(
+levels(data$ends_meet) <- list(
   "With Difficulty" = as.character(1:2),
   "Relatively easily" = as.character(3:4)
 )
@@ -166,18 +181,18 @@ levels(data$maxgrip) <- list(
   "High" = as.character(30:99)
 )
 
-levels(data$casp) <- list(
+levels(data$life_qual) <- list(
   "12-24" = as.character(12:24),
   "24-36" = as.character(24:36),
   "36-48" = as.character(36:48)
 )
 
-levels(data$hc002_mod) <- list(
+levels(data$doc_vis) <- list(
   "0-10" = as.character(0:10),
   "More than 10" = as.character(10:98)
 )
 
-levels(data$ep005_) <- list(
+levels(data$job_situ) <- list(
   "Retired" = as.character(1),
   "Employed" = as.character(2),
   "Unemployed/at home" = as.character(3:5),
@@ -200,6 +215,7 @@ levels(data$mar_stat) <- list(
 ```
 
 ```{r}
+
 working_data <- data %>% 
   filter(wave == 4, country_mod == "Estonia") %>% 
   select(all_of(variable_list), "cogscore")
@@ -217,31 +233,45 @@ del_data <- working_data[del_ind, ]
 # Display summary statistics
 summary(training_data)
 
+#data %>% rename(
+ # "native" = native,
+#  "loc" = loc,
+ # "edu" = edu,
+  #"outside_help" = outside_help,
+  #"life_qual" = life_qual,
+  #"doc_vis" = doc_vis,
+  #"hosp_stay" = hosp_stay,
+  #"nursing" = nursing,
+  #"vig_act" = vig_act,
+  #"job_situ" = job_situ,
+  #"ends_meet" = ends_meet,
+#)
+
+
 # par(mfrow = c(13, 2))
 # Box plots to show how BMI varies across different variables
 boxplot(cogscore ~ age, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ female, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ dn004_mod, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ iv009_mod, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ isced1997_r, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ mar_stat, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ native, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ loc, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ edu, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ hhsize, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ ch001_, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ sp002_mod, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ outside_help, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ chronic_mod, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ casp, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ life_qual, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ eurod, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ hc002_mod, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ hc012_, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ hc029_, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ doc_vis, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ hosp_stay, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ nursing, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ iadlza, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ adla, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ maxgrip, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ bmi2, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ ever_smoked, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ br015_, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ ep005_, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ co007_, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ vig_act, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ job_situ, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ ends_meet, data = working_data, ylab = "Composite Cognitive score")
 ```
 
 
@@ -250,11 +280,16 @@ boxplot(cogscore ~ co007_, data = working_data, ylab = "Composite Cognitive scor
 
 ```{r}
 # Define model formula that applies to both will be applied to both males and females
-mod <- cogscore ~ female + age + dn004_mod + iv009_mod + isced1997_r +
-  hhsize + sp002_mod + chronic_mod + casp + eurod + hc002_mod + hc012_ + hc029_ +
-  iadlza + adla + maxgrip + br015_ + ep005_ + co007_ + female:age + 
-  iv009_mod:sp002_mod  + hhsize:co007_ + age:hc002_mod + hc029_:iadlza
+mod <- cogscore ~ female + age + native + loc + edu +
+  hhsize + outside_help + chronic_mod + life_qual + eurod + doc_vis + hosp_stay + nursing +
+  iadlza + adla + maxgrip + vig_act + job_situ + ends_meet + female:age + 
+  loc:outside_help  + hhsize:ends_meet + age:doc_vis + nursing:iadlza
 
+
+
+
+
+# compare it with a minimal model, take the mean, or just a model with age, 
 
 # Define model
 fit <- lm(mod, data = na.omit(training_data))
@@ -305,3 +340,23 @@ compute_se(model = fit, test_data = na.omit(test4))
 
 ```
 
+```{r}
+mean_mod <- cogscore ~ female 
+
+# Define model
+mean_fit <- lm(mean_mod, data = na.omit(training_data))
+
+# Display model assumptions through residuals
+par(mfrow = c(2, 2))
+plot(mean_fit)
+
+# Add trace=F to not print each step of the step function
+mean_better_fit <- step(mean_fit, trace = F)
+summary(mean_better_fit)
+plot(mean_better_fit)
+
+compute_se(model = mean_fit, test_data = test1)
+compute_se(model = mean_fit, test_data = test2)
+compute_se(model = mean_fit, test_data = na.omit(test3))
+compute_se(model = mean_fit, test_data = na.omit(test4))
+```
