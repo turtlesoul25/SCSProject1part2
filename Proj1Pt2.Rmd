@@ -20,29 +20,27 @@ library(visdat)
 # Load data
 
 ```{r easyshare}
+# Loading data
 load("easySHARE_rel8_0_0.rda")
 data <- easySHARE_rel8_0_0
 
-
+# Renaming some variables
 data <- data %>% rename(
   native = dn004_mod,
   loc = iv009_mod,
   edu = isced1997_r,
   outside_help = sp002_mod,
-  life_qual = casp,
+  life_quality = casp,
   doc_vis = hc002_mod,
   hosp_stay = hc012_,
   nursing = hc029_,
   vig_act = br015_,
   job_situ = ep005_,
-  ends_meet = co007_
+  ends_meet = co007_,
+  country_name = country_mod
 )
 
-```
-
-
-
-```{r}
+# Computing and adding composite cognitive score
 cogvars <- c("recall_1", "recall_2", "orienti", "numeracy_1", "numeracy_2")
 cog = data[cogvars]
 
@@ -59,37 +57,41 @@ cog$cogscore = cogscore
 
 data$cogscore<-cog$cogscore
 
-```
-
-
-```{r}
-# Set missing values to NA       
-data[data < 0] <- NA
-
 # Replace country codes with country names
-data$country_mod <- countrycode(factor(data$country_mod),
+data$country_name <- countrycode(factor(data$country_name),
   origin = "iso3n",
   destination = "country.name"
 )
 
+
+# Set missing values to NA       
+data[data < 0] <- NA
+
+```
+
+
+
+```{r}
+# Tables to figure out which country we are picking
 length(unique(data$mergeid))
 table(data$wave,data$int_year)
-table(data$country_mod, data$wave)
+table(data$country_name, data$wave)
 ```
 
 ```{r vars}
-variable_list <- c("female", "age", "native", "loc", "edu",
-                    "hhsize", "ch001_", "outside_help", "chronic_mod", 
-                   "life_qual", "eurod", "doc_vis", "hosp_stay", 
-                   "nursing" , "iadlza", "adla" , "maxgrip", "bmi2", 
-                   "ever_smoked", "vig_act", "job_situ", "ends_meet")
+# Lists of variables
+# Removed ch001_, bmi2, ever_smoked
+variable_list <- c("female", "age", "native", "loc", "edu", "hhsize", 
+                   "outside_help", "chronic_mod", "life_quality", "eurod", 
+                   "doc_vis", "hosp_stay", "nursing", "iadlza", "adla", 
+                   "maxgrip", "vig_act", "job_situ", "ends_meet")
 
 binary_list <- c("female",  "native", "outside_help",  
-                 "hosp_stay", "nursing" , "ever_smoked")
+                 "hosp_stay", "nursing")
 
-categorical_list <- c("loc", "edu", "mar_stat", "hhsize", "ch001_", "chronic_mod", 
-                     "life_qual", "eurod", "doc_vis", "iadlza", "adla" , "maxgrip", 
-                     "bmi2", "vig_act", "job_situ", "ends_meet")
+categorical_list <- c("loc", "edu", "hhsize", "chronic_mod", 
+                     "life_quality", "eurod", "doc_vis", "iadlza", "adla" , 
+                     "maxgrip", "vig_act", "job_situ", "ends_meet")
 
 nonfactor_list <- c("age")
 
@@ -113,7 +115,7 @@ for (column in categorical_list) {
   data[, column] <- factor(data[, column])
 }
 
-# Simplifying levels for specific variables
+# Simplifying levels for specific categorical variables
 levels(data$edu) <- list(
   "Secondary and Below" = as.character(0:3),
   "Post Secondary" = as.character(4:6),
@@ -133,16 +135,6 @@ levels(data$loc) <- list(
   "Town_rural" = as.character(3:5)
 )
 
-levels(data$sphus) <- list(
-  "Good" = as.character(1:3),
-  "Not Good" = as.character(4:5)
-)
-
-levels(data$ch001_) <- list(
-  "0" = as.character(0),
-  "1-2" = as.character(1:2),
-  "More than 2" = as.character(3:19)
-)
 
 levels(data$chronic_mod) <- list(
   "0" = as.character(0),
@@ -181,10 +173,10 @@ levels(data$maxgrip) <- list(
   "High" = as.character(30:99)
 )
 
-levels(data$life_qual) <- list(
-  "12-24" = as.character(12:24),
-  "24-36" = as.character(24:36),
-  "36-48" = as.character(36:48)
+levels(data$life_quality) <- list(
+  "Low" = as.character(12:24),
+  "Moderate" = as.character(24:36),
+  "High" = as.character(36:48)
 )
 
 levels(data$doc_vis) <- list(
@@ -199,79 +191,61 @@ levels(data$job_situ) <- list(
   "Other" = as.character(97)
 )
 
-levels(data$bmi2) <- list(
-  "_Underweight" = as.character(1),
-  "_Normal" = as.character(2),
-  "_Overweight" = as.character(3),
-  "_Obese" = as.character(4)
-)
-
-levels(data$mar_stat) <- list(
-  "Married" = as.character(1),
-  "Unmarried" = as.character(c(0,4)),
-  "Widowed" = as.character(6),
-  "Divorced/Separated" = as.character(c(2,3,5))
-)
+# levels(data$ch001_) <- list(
+#   "0" = as.character(0),
+#   "1-2" = as.character(1:2),
+#   "More than 2" = as.character(3:19)
+# )
+# 
+# levels(data$bmi2) <- list(
+#   "_Underweight" = as.character(1),
+#   "_Normal" = as.character(2),
+#   "_Overweight" = as.character(3),
+#   "_Obese" = as.character(4)
+# )
+# 
+# levels(data$mar_stat) <- list(
+#   "Married" = as.character(1),
+#   "Unmarried" = as.character(c(0,4)),
+#   "Widowed" = as.character(6),
+#   "Divorced/Separated" = as.character(c(2,3,5))
+# )
 ```
 
 ```{r}
-
+# Pick a country and wave and subset the data to choose relevant variables and cogscore for the model
 working_data <- data %>% 
-  filter(wave == 4, country_mod == "Estonia") %>% 
+  filter(wave == 4, country_name == "Estonia") %>% 
   select(all_of(variable_list), "cogscore")
 
+# Visualise the data to see check proportion of missing data
 summary(working_data$cogscore)
 vis_miss(working_data)
 
 # Removing 200 observations to get training data
-del_ind <- sample.int(nrow(working_data), 200)
-training_data <- working_data[-del_ind, ]
-del_data <- working_data[del_ind, ]
+remove_indices <- sample.int(nrow(working_data), 200)
+training_data <- na.omit(working_data[-remove_indices, ])
+removed_data <- na.omit(working_data[remove_indices, ])
 ```
 
 ```{r}
 # Display summary statistics
 summary(training_data)
 
-#data %>% rename(
- # "native" = native,
-#  "loc" = loc,
- # "edu" = edu,
-  #"outside_help" = outside_help,
-  #"life_qual" = life_qual,
-  #"doc_vis" = doc_vis,
-  #"hosp_stay" = hosp_stay,
-  #"nursing" = nursing,
-  #"vig_act" = vig_act,
-  #"job_situ" = job_situ,
-  #"ends_meet" = ends_meet,
-#)
-
-
 # par(mfrow = c(13, 2))
 # Box plots to show how BMI varies across different variables
-boxplot(cogscore ~ age, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ female, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ native, data = working_data, ylab = "Composite Cognitive score")
+plot(cogscore ~ age, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ loc, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ edu, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ hhsize, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ ch001_, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ outside_help, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ chronic_mod, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ life_qual, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ life_quality, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ eurod, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ doc_vis, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ hosp_stay, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ nursing, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ iadlza, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ adla, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ maxgrip, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ bmi2, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ ever_smoked, data = working_data, ylab = "Composite Cognitive score")
 boxplot(cogscore ~ vig_act, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ job_situ, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ ends_meet, data = working_data, ylab = "Composite Cognitive score")
+boxplot(cogscore ~ job_situ:age, data = working_data, ylab = "Composite Cognitive score")
 ```
 
 
@@ -281,20 +255,14 @@ boxplot(cogscore ~ ends_meet, data = working_data, ylab = "Composite Cognitive s
 ```{r}
 # Define model formula that applies to both will be applied to both males and females
 mod <- cogscore ~ female + age + native + loc + edu +
-  hhsize + outside_help + chronic_mod + life_qual + eurod + doc_vis + hosp_stay + nursing +
+  hhsize + outside_help + chronic_mod + life_quality + eurod + doc_vis + hosp_stay + nursing +
   iadlza + adla + maxgrip + vig_act + job_situ + ends_meet + female:age + 
   loc:outside_help  + hhsize:ends_meet + age:doc_vis + nursing:iadlza
-
-
-
-
-
-# compare it with a minimal model, take the mean, or just a model with age, 
 
 # Define model
 fit <- lm(mod, data = na.omit(training_data))
 
-# Display model assumptions through residuals
+# Display model assumptions through residuals (can go in appendix)
 par(mfrow = c(2, 2))
 plot(fit)
 
@@ -308,6 +276,7 @@ confint(better_fit)
 
 
 ```{r set-up-scores}
+# Define a function that computes the scores of a model with test data
 compute_se <- function(model, test_data) {
   predicted_vals <- predict(model, newdata = test_data)
   se_scores <- (predicted_vals - test_data$cogscore)**2
@@ -315,48 +284,51 @@ compute_se <- function(model, test_data) {
   rmse_score
 }
 
-# Test data same as training data
-test1 <- na.omit(training_data)
+# Test data same as training data (Estonia, wave 4)
+test1_data <- training_data
 
-# Test data is removed data
-test2 <- na.omit(del_data)
+# Test data is removed data (Estonia, wave 4)
+test2_data <- removed_data
 
 # Test data is same wave (4) different country (Austria)
-test3 <- data %>% 
-  filter(wave == 4, country_mod == "Austria") %>% 
-  select(all_of(variable_list), "cogscore")
+test3_data <- na.omit(data %>% 
+  filter(wave == 4, country_name == "Austria") %>% 
+  select(all_of(variable_list), "cogscore"))
 
 # Test data is same country (Estonia) different wave (6)
-test4 <- data %>% 
-  filter(wave == 6, country_mod == "Estonia") %>% 
-  select(all_of(variable_list), "cogscore")
+test4_data <- na.omit(data %>% 
+  filter(wave == 6, country_name == "Estonia") %>% 
+  select(all_of(variable_list), "cogscore"))
 ```
 
 ```{r calc-scores}
-compute_se(model = fit, test_data = test1)
-compute_se(model = fit, test_data = test2)
-compute_se(model = fit, test_data = na.omit(test3))
-compute_se(model = fit, test_data = na.omit(test4))
+compute_se(model = fit, test_data = test1_data)
+compute_se(model = fit, test_data = test2_data)
+compute_se(model = fit, test_data = test3_data)
+compute_se(model = fit, test_data = test4_data)
 
 ```
 
 ```{r}
-mean_mod <- cogscore ~ female 
+# Define minimal model
+min_mod <- cogscore ~ age
 
 # Define model
-mean_fit <- lm(mean_mod, data = na.omit(training_data))
+min_fit <- lm(min_mod, data = training_data)
 
 # Display model assumptions through residuals
 par(mfrow = c(2, 2))
-plot(mean_fit)
+plot(min_fit)
 
-# Add trace=F to not print each step of the step function
-mean_better_fit <- step(mean_fit, trace = F)
-summary(mean_better_fit)
-plot(mean_better_fit)
-
-compute_se(model = mean_fit, test_data = test1)
-compute_se(model = mean_fit, test_data = test2)
-compute_se(model = mean_fit, test_data = na.omit(test3))
-compute_se(model = mean_fit, test_data = na.omit(test4))
+compute_se(model = min_fit, test_data = test1_data)
+compute_se(model = min_fit, test_data = test2_data)
+compute_se(model = min_fit, test_data = test3_data)
+compute_se(model = min_fit, test_data = test4_data)
 ```
+
+
+
+# Todo for coding
+refine boxplots
+make a summary table for model with confidence intervals
+forest plots
