@@ -15,6 +15,8 @@ library(tidyverse)
 library(gridExtra)
 library(countrycode)
 library(visdat)
+library(interactions)
+library(forestplot)
 ```
 
 # Load data
@@ -54,7 +56,6 @@ cogscore = rep(NA,dim(cog)[1])
 ind = cog$recall_1 >= 0 & cog$recall_2 >= 0 & cog$orienti >= 0 & !is.na(numeracy)
 cogscore[ind] = cog$recall_1[ind] + cog$recall_2[ind] +  cog$orienti[ind] + cog$numeracy[ind]
 cog$cogscore = cogscore
-
 data$cogscore<-cog$cogscore
 
 # Replace country codes with country names
@@ -80,7 +81,6 @@ table(data$country_name, data$wave)
 
 ```{r vars}
 # Lists of variables
-# Removed ch001_, bmi2, ever_smoked
 variable_list <- c("female", "age", "native", "loc", "edu", "hhsize", 
                    "outside_help", "chronic_mod", "life_quality", "eurod", 
                    "doc_vis", "hosp_stay", "nursing", "iadlza", "adla", 
@@ -122,6 +122,7 @@ levels(data$edu) <- list(
   "Other" = as.character(95:96)
 )
 
+
 levels(data$eurod) <- list(
   "Not Depressed" = as.character(0:3),
   "Somewhat Depressed" = as.character(4:6),
@@ -143,73 +144,65 @@ levels(data$chronic_mod) <- list(
   "7-10" = as.character(7:10)
 )
 
+
 levels(data$adla) <- list(
   "High Mobility" = as.character(0:2),
   "Low Mobility" = as.character(3:5)
 )
+
 
 levels(data$iadlza) <- list(
   "Low Difficulty" = as.character(0:2),
   "High Difficulty" = as.character(3:5)
 )
 
+
 levels(data$vig_act) <- list(
   "Often" = as.character(1:2),
   "Rarely" = as.character(3:4)
 )
+
 
 levels(data$ends_meet) <- list(
   "With Difficulty" = as.character(1:2),
   "Relatively easily" = as.character(3:4)
 )
 
+
 levels(data$hhsize) <- list(
   "Up to 4" = as.character(1:4),
-  "More than 4" = as.character(c(4:15))
+  "More than 4" = as.character(c(5:15))
 )
+
 
 levels(data$maxgrip) <- list(
   "Low" = as.character(1:29),
   "High" = as.character(30:99)
 )
 
+
 levels(data$life_quality) <- list(
   "Low" = as.character(12:24),
-  "Moderate" = as.character(24:36),
-  "High" = as.character(36:48)
+  "Moderate" = as.character(25:36),
+  "High" = as.character(37:48)
 )
+
 
 levels(data$doc_vis) <- list(
   "0-10" = as.character(0:10),
-  "More than 10" = as.character(10:98)
+  "More than 10" = as.character(11:98)
 )
+
 
 levels(data$job_situ) <- list(
   "Retired" = as.character(1),
   "Employed" = as.character(2),
-  "Unemployed/at home" = as.character(3:5),
+  "Unemployed" = as.character(3),
+  "Sick_Disabled" = as.character(4),
+  "Homemaker" = as.character(5),
   "Other" = as.character(97)
 )
 
-# levels(data$ch001_) <- list(
-#   "0" = as.character(0),
-#   "1-2" = as.character(1:2),
-#   "More than 2" = as.character(3:19)
-# )
-# 
-# levels(data$bmi2) <- list(
-#   "_Underweight" = as.character(1),
-#   "_Normal" = as.character(2),
-#   "_Overweight" = as.character(3),
-#   "_Obese" = as.character(4)
-# )
-# 
-# levels(data$mar_stat) <- list(
-#   "Married" = as.character(1),
-#   "Unmarried" = as.character(c(0,4)),
-#   "Widowed" = as.character(6),
-#   "Divorced/Separated" = as.character(c(2,3,5))
-# )
 ```
 
 ```{r}
@@ -218,9 +211,11 @@ working_data <- data %>%
   filter(wave == 4, country_name == "Estonia") %>% 
   select(all_of(variable_list), "cogscore")
 
+
 # Visualise the data to see check proportion of missing data
 summary(working_data$cogscore)
 vis_miss(working_data)
+
 
 # Removing 200 observations to get training data
 remove_indices <- sample.int(nrow(working_data), 200)
@@ -234,20 +229,21 @@ summary(training_data)
 
 # par(mfrow = c(13, 2))
 # Box plots to show how BMI varies across different variables
-plot(cogscore ~ age, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ loc, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ edu, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ outside_help, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ chronic_mod, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ life_quality, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ eurod, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ nursing, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ iadlza, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ adla, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ vig_act, data = working_data, ylab = "Composite Cognitive score")
-boxplot(cogscore ~ job_situ:age, data = working_data, ylab = "Composite Cognitive score")
-```
+working_data %>%filter(edu != "Other") %>% ggplot(aes(x = edu, y = cogscore)) +
+  geom_boxplot() +
+  coord_flip()
+boxplot(cogscore ~ chronic_mod, data = working_data, xlab = "Composite Cognitive score", horizontal = T)
+# boxplot(cogscore ~ life_quality, data = working_data, xlab = "Composite Cognitive score", horizontal = T)
+boxplot(cogscore ~ eurod, data = working_data, xlab = "Composite Cognitive score", horizontal = T)
+boxplot(cogscore ~ iadlza, data = working_data, xlab = "Composite Cognitive score", horizontal = T)
+# boxplot(cogscore ~ adla, data = working_data, xlab = "Composite Cognitive score", horizontal = T)
+boxplot(cogscore ~ vig_act, data = working_data, xlab = "Composite Cognitive score", horizontal = T)
 
+
+fitinteract <- lm(cogscore ~ female* age, data = working_data)
+interact_plot(fitinteract, pred = age, modx = female, interval = TRUE, line.thickness = 0.3, point.alpha = 1) 
+
+```
 
 
 
@@ -268,9 +264,9 @@ plot(fit)
 
 # Add trace=F to not print each step of the step function
 better_fit <- step(fit, trace = F)
-summary(better_fit)
-plot(better_fit)
-confint(better_fit)
+fit_summary <- summary(better_fit)
+fit_plots <- plot(better_fit)
+fit_intervals <- confint(better_fit)
 ```
 
 
@@ -324,6 +320,11 @@ compute_se(model = min_fit, test_data = test1_data)
 compute_se(model = min_fit, test_data = test2_data)
 compute_se(model = min_fit, test_data = test3_data)
 compute_se(model = min_fit, test_data = test4_data)
+```
+
+
+```{r}
+
 ```
 
 
