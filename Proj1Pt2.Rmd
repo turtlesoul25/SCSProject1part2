@@ -17,6 +17,8 @@ library(countrycode)
 library(visdat)
 library(interactions)
 library(forestplot)
+library(RColorBrewer)
+library(viridis)
 ```
 
 # Load data
@@ -207,20 +209,20 @@ levels(data$job_situ) <- list(
 
 ```{r}
 # Pick a country and wave and subset the data to choose relevant variables and cogscore for the model
-working_data <- data %>% 
+working_data <- na.omit(data %>% 
   filter(wave == 4, country_name == "Estonia") %>% 
-  select(all_of(variable_list), "cogscore")
+  select(all_of(variable_list), "cogscore"))
 
-
-# Visualise the data to see check proportion of missing data
-summary(working_data$cogscore)
-vis_miss(working_data)
+# 
+# # Visualise the data to see check proportion of missing data
+# summary(working_data$cogscore)
+# vis_miss(working_data)
 
 
 # Removing 200 observations to get training data
 remove_indices <- sample.int(nrow(working_data), 200)
-training_data <- na.omit(working_data[-remove_indices, ])
-removed_data <- na.omit(working_data[remove_indices, ])
+training_data <- working_data[-remove_indices, ]
+removed_data <- working_data[remove_indices, ]
 ```
 
 ```{r}
@@ -229,16 +231,36 @@ summary(training_data)
 
 # par(mfrow = c(13, 2))
 # Box plots to show how BMI varies across different variables
-working_data %>%filter(edu != "Other") %>% ggplot(aes(x = edu, y = cogscore)) +
-  geom_boxplot() +
-  coord_flip()
-boxplot(cogscore ~ chronic_mod, data = working_data, xlab = "Composite Cognitive score", horizontal = T)
-# boxplot(cogscore ~ life_quality, data = working_data, xlab = "Composite Cognitive score", horizontal = T)
-boxplot(cogscore ~ eurod, data = working_data, xlab = "Composite Cognitive score", horizontal = T)
-boxplot(cogscore ~ iadlza, data = working_data, xlab = "Composite Cognitive score", horizontal = T)
-# boxplot(cogscore ~ adla, data = working_data, xlab = "Composite Cognitive score", horizontal = T)
-boxplot(cogscore ~ vig_act, data = working_data, xlab = "Composite Cognitive score", horizontal = T)
+working_data %>% filter(edu != "Other") %>% 
+  ggplot(aes(x = edu, y = cogscore, fill = edu)) +
+  geom_boxplot(xlab = "Education level completed", ylab = "Composite Cognitive score", show.legend = F) +
+  coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2)
 
+working_data %>% 
+  ggplot(aes(x = chronic_mod, y = cogscore, fill = chronic_mod)) +
+  geom_boxplot(xlab = "Number of chronic diseases", ylab = "Composite Cognitive score", show.legend = F) +
+  coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2)
+
+working_data %>% 
+  ggplot(aes(x = eurod, y = cogscore, fill = eurod)) +
+  geom_boxplot(xlab = "Depression scale EURO-D", ylab = "Composite Cognitive score", show.legend = F) +
+  coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2)
+
+working_data %>% 
+  ggplot(aes(x = vig_act, y = cogscore, fill = vig_act)) +
+  geom_boxplot(xlab = "Frequency of Vigorous Activities", ylab = "Composite Cognitive score", show.legend = F) +
+  coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2) 
+
+working_data %>% 
+  ggplot(aes(x = iadlza, y = cogscore, fill = iadlza)) +
+  geom_boxplot(xlab = "Difficulties with Instrumental Activities of Daily Living Indices",
+               ylab = "Composite Cognitive score", show.legend = F) +
+  coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2)
+
+boxplot(cogscore ~ iadlza, data = working_data, xlab = "Composite Cognitive score", horizontal = T)
+boxplot(cogscore ~ vig_act, data = working_data, xlab = "Composite Cognitive score", horizontal = T)
+# boxplot(cogscore ~ adla, data = working_data, xlab = "Composite Cognitive score", horizontal = T)
+# boxplot(cogscore ~ life_quality, data = working_data, xlab = "Composite Cognitive score", horizontal = T)
 
 fitinteract <- lm(cogscore ~ female* age, data = working_data)
 interact_plot(fitinteract, pred = age, modx = female, interval = TRUE, line.thickness = 0.3, point.alpha = 1) 
@@ -256,17 +278,17 @@ mod <- cogscore ~ female + age + native + loc + edu +
   loc:outside_help  + hhsize:ends_meet + age:doc_vis + nursing:iadlza
 
 # Define model
-fit <- lm(mod, data = na.omit(training_data))
+fit <- lm(mod, data = training_data)
 
 # Display model assumptions through residuals (can go in appendix)
 par(mfrow = c(2, 2))
-plot(fit)
+fit_summary <- summary(fit)
+fit_plots <- plot(fit)
+fit_intervals <- confint(fit)
 
 # Add trace=F to not print each step of the step function
 better_fit <- step(fit, trace = F)
-fit_summary <- summary(better_fit)
-fit_plots <- plot(better_fit)
-fit_intervals <- confint(better_fit)
+
 ```
 
 
@@ -325,6 +347,7 @@ compute_se(model = min_fit, test_data = test4_data)
 
 ```{r}
 
+forestplot(labeltext = names(fit$coefficients), mean = coef(fit), lower = fit_intervals[,1], upper = fit_intervals[,2])
 ```
 
 
