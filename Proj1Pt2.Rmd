@@ -19,6 +19,7 @@ library(interactions)
 library(forestplot)
 library(RColorBrewer)
 library(viridis)
+library(xtable) 
 ```
 
 # Load data
@@ -250,7 +251,8 @@ iadlza_plot <- working_data %>%
   geom_boxplot(show.legend = F) + xlab("Difficulties with Instrumental Activities") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2)
 
 fitinteract <- lm(cogscore ~ female* age, data = working_data)
-age_female_plot <- interact_plot(fitinteract, pred = age, modx = female, interval = TRUE, line.thickness = 0.3, point.alpha = 1)
+age_female_plot <- interact_plot(fitinteract, pred = age, modx = female, interval = TRUE, line.thickness = 0.3, point.alpha = 1, x.label = "Age", y.label = "Composite Cognitive Score", 
+                                 legend.main = "Female")
 
 
 ggsave("edu_plot.png", edu_plot)
@@ -267,8 +269,7 @@ ggsave("age_female_plot.png", age_female_plot)
 ```{r}
 # Define model formula that applies to both will be applied to both males and females
 mod <- cogscore ~ female + age + native + loc + edu + outside_help + 
-  chronic_mod + life_quality + eurod + doc_vis + nursing +
-  iadlza  + maxgrip + vig_act + job_situ + loc:outside_help + age:doc_vis + 
+  chronic_mod + life_quality + eurod + doc_vis + nursing + iadlza  + maxgrip + vig_act + job_situ + loc:outside_help + age:doc_vis + 
   nursing:iadlza
 
 # Define model
@@ -276,8 +277,9 @@ fit <- lm(mod, data = training_data)
 
 # Display model assumptions through residuals (can go in appendix)
 par(mfrow = c(2, 2))
+plot(fit)
+
 fit_summary <- summary(fit)
-fit_plots <- plot(fit)
 fit_intervals <- confint(fit)
 
 # Add trace=F to not print each step of the step function
@@ -340,9 +342,6 @@ compute_se(model = min_fit, test_data = test4_data)
 ```
 
 
-```{r}
-forestplot(labeltext = names(fit$coefficients), mean = coef(fit), lower = fit_intervals[,1], upper = fit_intervals[,2])
-```
 
 ```{r}
 fit_summary_sign <- fit_summary$coefficients[ , 4]  # Pull out p-values
@@ -353,27 +352,31 @@ fit_summary_stars[fit_summary_sign < 0.01] <- "**"
 fit_summary_stars[fit_summary_sign < 0.001] <- "***"
 fit_summary_stars[is.na(fit_summary_stars)] <- ""
 names(fit_summary_stars) <- names(fit_summary_sign)
-fit_summary_stars 
 fit_df <- cbind(data.frame("Estimate" = fit_summary$coefficients[, 1]), data.frame("CI_lower" = fit_intervals[, 1], "CI_upper" = fit_intervals[, 2]), data.frame("p-value" = fit_summary$coefficients[, 4]), data.frame(Signifiance = fit_summary_stars))
 
-
 fit_rownames <- c("Intercept", "female", "age", "native", "loc_Town_rural", 
-                  "edu_Post_Secondary", "hhsize_More_than_4", "outside_help", 
+                  "edu_Post_Secondary", "outside_help", 
                   "chronic_mod1-3", "chronic_mod4-6", "chronic_mod7-10",
                   "life_quality_Moderate", "life_quality_High", 
                   "eurod_Somewhat_Depressed", "eurod_Relatively_Depressed",
-                  "eurod_Very_Depressed", "doc_vis_More_than_10", "hosp_stay", 
-                  "nursing", "iadlza_High_Difficulty", "adla_Low_Mobility",
+                  "eurod_Very_Depressed", "doc_vis_More_than_10",  
+                  "nursing", "iadlza_High_Difficulty", 
                   "maxgrip_High", "vig_act_Rarely", "job_situ_Employed", 
                   "job_situ_Unemployed", "job_situ_Sick_Disabled", 
                   "job_situ_Homemaker", "job_situ_Other", 
-                  "ends_meet_Relatively_easily", "female:age", 
                   "loc_Town_rural:outside_help", 
-                  "hhsize_More_than_4:ends_meet_Relatively_easily", 
                   "age:doc_vis_More_than_10", "nursing:iadlza_High_Difficulty")
-
 rownames(fit_df) <- fit_rownames
+xtable(fit_df)
 
+forest_names <- c("female", "age", "native", "loc_Town_rural", "edu_Post_Secondary",
+                  "outside_help", "iadlza_High_Difficulty", "vig_act_Rarely", 
+                  "age:doc_vis_More_than_10")
+forest_plot_df <- fit_df[forest_names, ]
+forestplot(labeltext = rownames(forest_plot_df), mean = forest_plot_df$Estimate,
+           lower = forest_plot_df$CI_lower, upper = forest_plot_df$CI_upper, 
+           boxsize = 0.2, xlab = "Coefficient estimate value", col = fpColors(box = "gray", 
+           lines = "black"), gpar())
 ```
 
 
