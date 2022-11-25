@@ -233,7 +233,7 @@ summary(training_data)
 # Box plots to show how BMI varies across different variables
 edu_plot <- working_data %>% filter(edu != "Other") %>% 
   ggplot(aes(x = edu, y = cogscore, fill = edu)) +
-  geom_boxplot(show.legend = F) + xlab("Education level completed") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2)
+  geom_boxplot(show.legend = F) + xlab("Education level completed") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2) + theme(axis.text = element_text(size = rel(1.5)))
 
 chronic_plot <- working_data %>% 
   ggplot(aes(x = chronic_mod, y = cogscore, fill = chronic_mod)) + geom_boxplot(show.legend = F) + xlab("Number of chronic diseases") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2)
@@ -373,15 +373,19 @@ forest_names <- c("female", "age", "native", "loc_Town_rural", "edu_Post_Seconda
                   "outside_help", "iadlza_High_Difficulty", "vig_act_Rarely", 
                   "age:doc_vis_More_than_10")
 forest_plot_df <- fit_df[forest_names, ]
-forestplot(labeltext = rownames(forest_plot_df), mean = forest_plot_df$Estimate,
-           lower = forest_plot_df$CI_lower, upper = forest_plot_df$CI_upper, 
-           boxsize = 0.2, xlab = "Coefficient estimate value", col = fpColors(box = "gray", 
-           lines = "black"), gpar())
+forest_plot_df[, c(1,5)] |> forestplot(labeltext = rownames(forest_plot_df), 
+           mean = forest_plot_df$Estimate,
+           lower = forest_plot_df$CI_lower, 
+           upper = forest_plot_df$CI_upper,
+           boxsize = 0.18, xlab = "Coefficient estimate value",
+           fn.ci_norm=matrix(c("fpDrawCircleCI"), 
+                             nrow = 9, ncol=1, byrow=T)) |>
+  fp_set_style(lines = "red", box = "black")
+
 ```
 
 
 
-# Todo for coding
-refine boxplots
-make a summary table for model with confidence intervals
+# Todo
 forest plots
+prediction errors 
