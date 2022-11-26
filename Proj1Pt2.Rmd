@@ -20,6 +20,8 @@ library(forestplot)
 library(RColorBrewer)
 library(viridis)
 library(xtable) 
+library(grid)
+library(forestploter)
 ```
 
 # Load data
@@ -230,36 +232,41 @@ summary(training_data)
 ```
 
 ```{r}
-# Box plots to show how BMI varies across different variables
-edu_plot <- working_data %>% filter(edu != "Other") %>% 
+# Box plots to show how cogscore varies across different variables
+edu_plot <- working_data %>% filter(edu != "Other") %>%
   ggplot(aes(x = edu, y = cogscore, fill = edu)) +
-  geom_boxplot(show.legend = F) + xlab("Education level completed") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2) + theme(axis.text = element_text(size = rel(1.5)))
+  geom_boxplot(show.legend = F) + 
+  xlab("Education level completed") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2) + theme(axis.text.y = element_text(size = rel(1.5), angle = 45, hjust = 0.5), axis.text.x = element_text(size = rel(1.5), hjust = 0.5), axis.title = element_text(size = rel(1.5)))
+edu_plot
+ggsave("edu_plot.png", edu_plot)
 
-chronic_plot <- working_data %>% 
-  ggplot(aes(x = chronic_mod, y = cogscore, fill = chronic_mod)) + geom_boxplot(show.legend = F) + xlab("Number of chronic diseases") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2)
+chronic_plot <- working_data %>%
+  ggplot(aes(x = chronic_mod, y = cogscore, fill = chronic_mod)) + geom_boxplot(show.legend = F) + xlab("Number of chronic diseases") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2) + theme(axis.text.y = element_text(size = rel(1.5), hjust = 0.5), axis.text.x = element_text(size = rel(1.5), hjust = 0.5), axis.title = element_text(size = rel(1.5)))
+chronic_plot
+ggsave("chronic_plot.png", chronic_plot)
 
-eurod_plot <- working_data %>% 
-  ggplot(aes(x = eurod, y = cogscore, fill = eurod)) + geom_boxplot(show.legend = F) + xlab("Depression scale EURO-D") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2)
+eurod_plot <- working_data %>%
+  ggplot(aes(x = eurod, y = cogscore, fill = eurod)) + geom_boxplot(show.legend = F) + xlab("Depression scale EURO-D") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2) + theme(axis.text.y = element_text(size = rel(1.5), angle = 45, hjust = 0.5), axis.text.x = element_text(size = rel(1.5), hjust = 0.5), axis.title = element_text(size = rel(1.5)))
+eurod_plot
+ggsave("eurod_plot.png", eurod_plot)
+
+vig_act_plot <- working_data %>%
+  ggplot(aes(x = vig_act, y = cogscore, fill = vig_act)) + geom_boxplot(show.legend = F) + xlab("Frequency of Vigorous Activities") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2) + theme(axis.text.y = element_text(size = rel(1.5), angle = 45, hjust = 0.5), axis.text.x = element_text(size = rel(1.5), hjust = 0.5), axis.title = element_text(size = rel(1.5)))
+vig_act_plot
+ggsave("vig_act_plot.png", vig_act_plot)
 
 
-vig_act_plot <- working_data %>% 
-  ggplot(aes(x = vig_act, y = cogscore, fill = vig_act)) + geom_boxplot(show.legend = F) + xlab("Frequency of Vigorous Activities") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2)
-
-
-iadlza_plot <- working_data %>% 
+iadlza_plot <- working_data %>%
   ggplot(aes(x = iadlza, y = cogscore, fill = iadlza)) +
-  geom_boxplot(show.legend = F) + xlab("Difficulties with Instrumental Activities") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2)
+  geom_boxplot(show.legend = F) + xlab("Difficulties with Instrumental Activities") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2) + theme(axis.text.y = element_text(size = rel(1.5), angle = 45, hjust = 0.5), axis.text.x = element_text(size = rel(1.5), hjust = 0.5), axis.title = element_text(size = rel(1.5)))
+iadlza_plot
+ggsave("iadlza_plot.png", iadlza_plot)
+
 
 fitinteract <- lm(cogscore ~ female* age, data = working_data)
-age_female_plot <- interact_plot(fitinteract, pred = age, modx = female, interval = TRUE, line.thickness = 0.3, point.alpha = 1, x.label = "Age", y.label = "Composite Cognitive Score", 
-                                 legend.main = "Female")
+age_female_plot <- interact_plot(fitinteract, pred = age, modx = female, interval = TRUE, line.thickness = 0.3, point.alpha = 1, x.label = "Age", y.label = "Composite Cognitive Score", legend.main = "Female") + theme(axis.text.y = element_text(size = rel(1.5), hjust = 0.5), axis.text.x = element_text(size = rel(1.5), hjust = 0.5), axis.title = element_text(size = rel(1.5)))
+age_female_plot
 
-
-ggsave("edu_plot.png", edu_plot)
-ggsave("chronic_plot.png", chronic_plot)
-ggsave("eurod_plot.png", eurod_plot)
-ggsave("vig_act_plot.png", vig_act_plot)
-ggsave("iadlza_plot.png", iadlza_plot)
 ggsave("age_female_plot.png", age_female_plot)
 ```
 
@@ -268,7 +275,7 @@ ggsave("age_female_plot.png", age_female_plot)
 
 ```{r}
 # Define model formula that applies to both will be applied to both males and females
-mod <- cogscore ~ female + age + native + loc + edu + outside_help + 
+mod <- cogscore ~ age + female + native + loc + edu + outside_help + 
   chronic_mod + life_quality + eurod + doc_vis + nursing + iadlza  + maxgrip + vig_act + job_situ + loc:outside_help + age:doc_vis + 
   nursing:iadlza
 
@@ -352,9 +359,9 @@ fit_summary_stars[fit_summary_sign < 0.01] <- "**"
 fit_summary_stars[fit_summary_sign < 0.001] <- "***"
 fit_summary_stars[is.na(fit_summary_stars)] <- ""
 names(fit_summary_stars) <- names(fit_summary_sign)
-fit_df <- cbind(data.frame("Estimate" = fit_summary$coefficients[, 1]), data.frame("CI_lower" = fit_intervals[, 1], "CI_upper" = fit_intervals[, 2]), data.frame("p-value" = fit_summary$coefficients[, 4]), data.frame(Signifiance = fit_summary_stars))
+fit_df <- cbind(data.frame("Estimate" = fit_summary$coefficients[, 1]), data.frame("CI_lower" = fit_intervals[, 1], "CI_upper" = fit_intervals[, 2]), data.frame("p-value" = fit_summary$coefficients[, 4]), data.frame(Significance = fit_summary_stars))
 
-fit_rownames <- c("Intercept", "female", "age", "native", "loc_Town_rural", 
+fit_rownames <- c("Intercept", "age", "female", "native", "loc_Town_rural", 
                   "edu_Post_Secondary", "outside_help", 
                   "chronic_mod1-3", "chronic_mod4-6", "chronic_mod7-10",
                   "life_quality_Moderate", "life_quality_High", 
@@ -368,21 +375,46 @@ fit_rownames <- c("Intercept", "female", "age", "native", "loc_Town_rural",
                   "age:doc_vis_More_than_10", "nursing:iadlza_High_Difficulty")
 rownames(fit_df) <- fit_rownames
 xtable(fit_df)
+```
 
-forest_names <- c("female", "age", "native", "loc_Town_rural", "edu_Post_Secondary",
+
+```{r}
+forest_names <- c("age", "female", "native", "loc_Town_rural", "edu_Post_Secondary",
                   "outside_help", "iadlza_High_Difficulty", "vig_act_Rarely", 
                   "age:doc_vis_More_than_10")
-forest_plot_df <- fit_df[forest_names, ]
-forest_plot_df[, c(1,5)] |> forestplot(labeltext = rownames(forest_plot_df), 
-           mean = forest_plot_df$Estimate,
-           lower = forest_plot_df$CI_lower, 
-           upper = forest_plot_df$CI_upper,
-           boxsize = 0.18, xlab = "Coefficient estimate value",
-           fn.ci_norm=matrix(c("fpDrawCircleCI"), 
-                             nrow = 9, ncol=1, byrow=T)) |>
-  fp_set_style(lines = "red", box = "black")
+
+forest_df <- data.frame(Variable = forest_names, 
+                             Estimate = round(fit_df[forest_names, 1], 2), 
+                             CI_lower = round(fit_df[forest_names, 2], 2), 
+                             CI_upper = round(fit_df[forest_names, 3], 2),
+                             p.value = round(fit_df[forest_names, 4], 2),
+                             Significance = fit_df[forest_names, 5]) 
+
+
+jpeg(filename = "Forestplot.jpeg", units = "in", width = 10, height = 7, res = 300)
+forest_df |> 
+  forestplot(labeltext = c(Variable, Estimate, Significance),
+  mean = Estimate, 
+  lower = CI_lower,
+  upper = CI_upper,
+  boxsize = 0.15, xlab = "Coefficient estimate value",
+  fn.ci_norm= "fpDrawCircleCI", 
+  colgap = unit(3, "mm"),
+  vertices = T,
+  cex = 0.8
+  ) |>
+  fp_set_style(lines = "red", box = "black", 
+               align = "rrc",
+               txt_gp = fpTxtGp(xlab = gpar(cex = 1), 
+                                ticks = gpar(cex = 1))) |>
+  fp_add_header(Estimate = "Estimate", Variable = "Variables",  Significance = "Significance") |>
+  fp_add_lines() |>
+  fp_set_zebra_style("#EFEFEF")
+dev.off()
 
 ```
+
+
 
 
 
