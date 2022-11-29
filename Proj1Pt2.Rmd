@@ -7,24 +7,29 @@ output:
   html_document: default
 ---
 
+This project had equal contributions from all members. All three members sorted and cleaned the data together along with building and selecting the model. Mayez and Georgia refined the models to choose the most suitable one. Niharika and Georgia wrote the code for box plots and other graphs and tables in the project. All three members contributed towards writing the `Methods' section of the report. Mayez wrote the introduction to the report. Georgia and Mayez wrote the analysis of the models and box plots, as well as the executive summary, while Niharika analysed the scores. Georgia formatted the report, including making plots and tables presentable. 
+
+
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 set.seed(1234)
-library(ggplot2)
-library(tidyverse)
-library(gridExtra)
-library(countrycode)
-library(visdat)
-library(interactions)
-library(forestplot)
-library(RColorBrewer)
-library(viridis)
-library(xtable)
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(gridExtra))
+suppressPackageStartupMessages(library(countrycode))
+suppressPackageStartupMessages(library(visdat))
+suppressPackageStartupMessages(library(interactions))
+suppressPackageStartupMessages(library(forestplot))
+suppressPackageStartupMessages(library(RColorBrewer))
+suppressPackageStartupMessages(library(viridis))
+suppressPackageStartupMessages(library(xtable))
 ```
 
 # Pre-processing
+## Cleaning the data 
 
-```{r easyshare}
+The following code chunk carries out: computing composite cognitive score, renaming variables and handling missing values from the easySHARE dataset by setting all negative entries to `NA`.
+```{r data-clean}
 # Loading data
 load("easySHARE_rel8_0_0.rda")
 data <- easySHARE_rel8_0_0
@@ -45,19 +50,19 @@ data <- data %>% rename(
 
 # Computing and adding composite cognitive score
 cogvars <- c("recall_1", "recall_2", "orienti", "numeracy_1", "numeracy_2")
-cog = data[cogvars]
+cog <- data[cogvars]
 
-numeracy = rep(NA,dim(cog)[1])
-numeracy[cog$numeracy_1 >= 0 & cog$numeracy_2 >= 0] = (cog$numeracy_1[cog$numeracy_1 >= 0 & cog$numeracy_2 >= 0] + cog$numeracy_2[cog$numeracy_1 >= 0 & cog$numeracy_2 >= 0] )/2
-numeracy[cog$numeracy_1 >= 0 & cog$numeracy_2 < 0] = cog$numeracy_1[cog$numeracy_1 >= 0 & cog$numeracy_2 < 0]
-numeracy[cog$numeracy_1 < 0 & cog$numeracy_2 >= 0] = cog$numeracy_2[cog$numeracy_1 < 0 & cog$numeracy_2 >= 0]
-cog$numeracy = numeracy
+numeracy <- rep(NA, dim(cog)[1])
+numeracy[cog$numeracy_1 >= 0 & cog$numeracy_2 >= 0] <- (cog$numeracy_1[cog$numeracy_1 >= 0 & cog$numeracy_2 >= 0] + cog$numeracy_2[cog$numeracy_1 >= 0 & cog$numeracy_2 >= 0]) / 2
+numeracy[cog$numeracy_1 >= 0 & cog$numeracy_2 < 0] <- cog$numeracy_1[cog$numeracy_1 >= 0 & cog$numeracy_2 < 0]
+numeracy[cog$numeracy_1 < 0 & cog$numeracy_2 >= 0] <- cog$numeracy_2[cog$numeracy_1 < 0 & cog$numeracy_2 >= 0]
+cog$numeracy <- numeracy
 
-cogscore = rep(NA,dim(cog)[1])
-ind = cog$recall_1 >= 0 & cog$recall_2 >= 0 & cog$orienti >= 0 & !is.na(numeracy)
-cogscore[ind] = cog$recall_1[ind] + cog$recall_2[ind] +  cog$orienti[ind] + cog$numeracy[ind]
-cog$cogscore = cogscore
-data$cogscore<-cog$cogscore
+cogscore <- rep(NA, dim(cog)[1])
+ind <- cog$recall_1 >= 0 & cog$recall_2 >= 0 & cog$orienti >= 0 & !is.na(numeracy)
+cogscore[ind] <- cog$recall_1[ind] + cog$recall_2[ind] + cog$orienti[ind] + cog$numeracy[ind]
+cog$cogscore <- cogscore
+data$cogscore <- cog$cogscore
 
 # Replace country codes with country names
 data$country_name <- countrycode(factor(data$country_name),
@@ -66,39 +71,38 @@ data$country_name <- countrycode(factor(data$country_name),
 )
 
 
-# Set missing values to NA       
+# Set missing values to NA
 data[data < 0] <- NA
-
 ```
 
 
-
-```{r}
-# Tables to figure out which country and wave would be suitable to model with 
-length(unique(data$mergeid))
-table(data$wave,data$int_year)
-table(data$country_name, data$wave)
+The table below illustrates the number of observations per country in each wave. This was helpful in knowing which countries and waves had large enough sample sizes to build the model with.
+```{r select-wave-country}
+# Tables to figure out which country and wave would be suitable to model with
+knitr::kable(table(data$country_name, data$wave))
 ```
 
-```{r vars}
+Then, we defined the variables we wanted to build the model with. This list was refined after a round of model selection, so the code here has all the variables included in our final model.
+```{r variables}
 # Lists of variables that would be used in the model
-variable_list <- c("age", "female", "native", "loc", "edu", 
-                   "outside_help", "chronic_mod", "life_quality", "eurod", 
-                   "doc_vis", "nursing", "iadlza",
-                   "maxgrip", "vig_act", "job_situ")
+variable_list <- c(
+  "age", "female", "native", "loc", "edu",
+  "outside_help", "chronic_mod", "life_quality", "eurod",
+  "doc_vis", "nursing", "iadlza",
+  "maxgrip", "vig_act", "job_situ"
+)
 
-binary_list <- c("female", "native", "outside_help",  
-                 "hosp_stay", "nursing")
+binary_list <- c("female", "native", "outside_help", "nursing")
 
-categorical_list <- c("loc", "edu", "hhsize", "chronic_mod", 
-                     "life_quality", "eurod", "doc_vis", "iadlza", "adla" , 
-                     "maxgrip", "vig_act", "job_situ", "ends_meet")
+categorical_list <- c(
+  "loc", "edu", "chronic_mod", "life_quality", "eurod",
+  "doc_vis", "iadlza", "maxgrip", "vig_act", "job_situ"
+)
 
 continuous_list <- c("age")
-
 ```
 
-
+The categorical variables were then factored into appropriately defined factor levels and the binary variables were treated as dummy variables with `No = 0` and `Yes = 1`.
 ```{r factoring}
 # Factoring binary variables as dummy variables
 for (column in binary_list) {
@@ -119,7 +123,7 @@ for (column in categorical_list) {
 # Simplifying levels for specific categorical variables
 levels(data$edu) <- list(
   "Secondary and Below" = as.character(0:3),
-  "Post Secondary" = as.character(4:6),
+  "Post-Secondary" = as.character(4:6),
   "Other" = as.character(95:96)
 )
 
@@ -145,11 +149,6 @@ levels(data$chronic_mod) <- list(
   "7-10" = as.character(7:10)
 )
 
-
-levels(data$adla) <- list(
-  "High Mobility" = as.character(0:2),
-  "Low Mobility" = as.character(3:5)
-)
 
 
 levels(data$iadlza) <- list(
@@ -191,20 +190,25 @@ levels(data$job_situ) <- list(
   "Homemaker" = as.character(5),
   "Other" = as.character(97)
 )
-
 ```
 
 
+## Setting up the data set for the model
+After using the table with number of observations per country in each wave, we picked Estonia in Wave 4 to be the data set we wishes to build the model with. We did this by checking the proportion of missing data (using the `vis_miss()` function) in order to make our final selection of the wave and country. Then, all the observations with missing values (given by `NA`) were omitted so that the model was built with complete observations. After this, the data from Estonia in wave 4 had 5231 observations which were partitioned into two sets:
 
-```{r}
+\begin{itemize}
+\item Test 2 data: 200 observations were set aside so that they could be used later on for assessing the model that was constructed
+\item Training data: The remaining 5031 observations that was used to construct the model.
+\end{itemize}
+
+```{r choosing-dataset}
 # Pick a country and wave and subset the data to choose relevant variables and cogscore for the model
-working_data <- na.omit(data %>% 
-  filter(wave == 4, country_name == "Estonia") %>% 
+working_data <- na.omit(data %>%
+  filter(wave == 4, country_name == "Estonia") %>%
   select(all_of(variable_list), "cogscore"))
 
 
 # Visualise the data to see check proportion of missing data (Note: this code was used with working_data that did not have the na.omit() function to analyse the proportion of missing data)
-summary(working_data$cogscore)
 vis_miss(working_data)
 
 
@@ -213,75 +217,188 @@ remove_indices <- sample.int(nrow(working_data), 200)
 training_data <- working_data[-remove_indices, ]
 removed_data <- working_data[remove_indices, ]
 
-# Display summary statistics
-summary(training_data)
+# Display summary statistics of chosen data using knitr
+options(knitr.kable.NA = "")
+knitr::kable(summary(training_data %>% select("cogscore", "age", "job_situ", "chronic_mod", "edu", "life_quality")))
+knitr::kable(summary(training_data %>% select(c(all_of(binary_list), "loc", "maxgrip", "iadlza"))))
+knitr::kable(summary(training_data %>% select(c("doc_vis", "vig_act"))))
+
 ```
 
 
 # Visualising some of the chosen explanatory variables 
-```{r}
+
+## Boxplots for categorical variables and plot for age to compare cognitive scores
+We created box plots to show how cognitive score varies for different levels of the categorical variables and for increasing/decreasing values of continuous variables. The variables chosen included: level of education completed, number of chronic diseases, depression level, frequency of vigorous activities, difficulty in instrumental activities of daily living (such as grocery shopping, taking medications, etc.), and age.
+```{r variable-plots}
 # Box plots to show how cogscore varies across different variables
+
 # Box plot for how cogscore varies across levels of education completed
-edu_plot <- working_data %>% filter(edu != "Other") %>%
+edu_plot <- training_data %>%
+  filter(edu != "Other") %>%
   ggplot(aes(x = edu, y = cogscore, fill = edu)) +
-  geom_boxplot(show.legend = F) + 
-  xlab("Education level completed") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2) + theme(axis.text.y = element_text(size = rel(1.5), angle = 45, hjust = 0.5), axis.text.x = element_text(size = rel(1.5), hjust = 0.5), axis.title = element_text(size = rel(1.5)))
+  geom_boxplot(show.legend = F) +
+  xlab("Education level completed") +
+  ylab("Composite Cognitive score") +
+  coord_flip() +
+  stat_boxplot(geom = "errorbar", width = 0.2) +
+  theme(axis.text.y = element_text(size = rel(1.5), angle = 45, hjust = 0.5), axis.text.x = element_text(size = rel(1.5), hjust = 0.5), axis.title = element_text(size = rel(1.5)))
 edu_plot
-ggsave("edu_plot.png", edu_plot)
+suppressMessages(ggsave("edu_plot.png", edu_plot))
 
 # Box plot for how cogscore varies across number of chronic diseases
-chronic_plot <- working_data %>%
-  ggplot(aes(x = chronic_mod, y = cogscore, fill = chronic_mod)) + geom_boxplot(show.legend = F) + xlab("Number of chronic diseases") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2) + theme(axis.text.y = element_text(size = rel(1.5), hjust = 0.5), axis.text.x = element_text(size = rel(1.5), hjust = 0.5), axis.title = element_text(size = rel(1.5)))
+chronic_plot <- training_data %>%
+  ggplot(aes(x = chronic_mod, y = cogscore, fill = chronic_mod)) +
+  geom_boxplot(show.legend = F) +
+  xlab("Number of chronic diseases") +
+  ylab("Composite Cognitive score") +
+  coord_flip() +
+  stat_boxplot(geom = "errorbar", width = 0.2) +
+  theme(axis.text.y = element_text(size = rel(1.5), hjust = 0.5), axis.text.x = element_text(size = rel(1.5), hjust = 0.5), axis.title = element_text(size = rel(1.5)))
 chronic_plot
-ggsave("chronic_plot.png", chronic_plot)
+suppressMessages(ggsave("chronic_plot.png", chronic_plot))
 
 
 # Box plot for how cogscore varies across EURO-D depression scales
-eurod_plot <- working_data %>%
-  ggplot(aes(x = eurod, y = cogscore, fill = eurod)) + geom_boxplot(show.legend = F) + xlab("Depression scale EURO-D") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2) + theme(axis.text.y = element_text(size = rel(1.5), angle = 45, hjust = 0.5), axis.text.x = element_text(size = rel(1.5), hjust = 0.5), axis.title = element_text(size = rel(1.5)))
+eurod_plot <- training_data %>%
+  ggplot(aes(x = eurod, y = cogscore, fill = eurod)) +
+  geom_boxplot(show.legend = F) +
+  xlab("Depression scale EURO-D") +
+  ylab("Composite Cognitive score") +
+  coord_flip() +
+  stat_boxplot(geom = "errorbar", width = 0.2) +
+  theme(axis.text.y = element_text(size = rel(1.5), angle = 45, hjust = 0.5), axis.text.x = element_text(size = rel(1.5), hjust = 0.5), axis.title = element_text(size = rel(1.5)))
 eurod_plot
-ggsave("eurod_plot.png", eurod_plot)
+suppressMessages(ggsave("eurod_plot.png", eurod_plot))
 
 
 # Box plot for how cogscore varies across frequence of vigorous activities
-vig_act_plot <- working_data %>%
-  ggplot(aes(x = vig_act, y = cogscore, fill = vig_act)) + geom_boxplot(show.legend = F) + xlab("Frequency of Vigorous Activities") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2) + theme(axis.text.y = element_text(size = rel(1.5), angle = 45, hjust = 0.5), axis.text.x = element_text(size = rel(1.5), hjust = 0.5), axis.title = element_text(size = rel(1.5)))
+vig_act_plot <- training_data %>%
+  ggplot(aes(x = vig_act, y = cogscore, fill = vig_act)) +
+  geom_boxplot(show.legend = F) +
+  xlab("Frequency of Vigorous Activities") +
+  ylab("Composite Cognitive score") +
+  coord_flip() +
+  stat_boxplot(geom = "errorbar", width = 0.2) +
+  theme(axis.text.y = element_text(size = rel(1.5), angle = 45, hjust = 0.5), axis.text.x = element_text(size = rel(1.5), hjust = 0.5), axis.title = element_text(size = rel(1.5)))
 vig_act_plot
-ggsave("vig_act_plot.png", vig_act_plot)
+suppressMessages(ggsave("vig_act_plot.png", vig_act_plot))
 
 
 # Box plot for how cogscore varies across difficulty in instrumental activities of daily living
-iadlza_plot <- working_data %>%
+iadlza_plot <- training_data %>%
   ggplot(aes(x = iadlza, y = cogscore, fill = iadlza)) +
-  geom_boxplot(show.legend = F) + xlab("Difficulties with Instrumental Activities") + ylab("Composite Cognitive score") + coord_flip() + stat_boxplot(geom = "errorbar", width = 0.2) + theme(axis.text.y = element_text(size = rel(1.5), angle = 45, hjust = 0.5), axis.text.x = element_text(size = rel(1.5), hjust = 0.5), axis.title = element_text(size = rel(1.5)))
+  geom_boxplot(show.legend = F) +
+  xlab("Difficulties with Instrumental Activities") +
+  ylab("Composite Cognitive score") +
+  coord_flip() +
+  stat_boxplot(geom = "errorbar", width = 0.2) +
+  theme(axis.text.y = element_text(size = rel(1.5), angle = 45, hjust = 0.5), axis.text.x = element_text(size = rel(1.5), hjust = 0.5), axis.title = element_text(size = rel(1.5)))
 iadlza_plot
-ggsave("iadlza_plot.png", iadlza_plot)
+suppressMessages(ggsave("iadlza_plot.png", iadlza_plot))
 
 
 # Box plot for how cogscore varies differently across age groups for males and females
-fitinteract <- lm(cogscore ~ female* age, data = working_data)
+fitinteract <- lm(cogscore ~ female * age, data = training_data)
 age_female_plot <- interact_plot(fitinteract, pred = age, modx = female, interval = TRUE, line.thickness = 0.3, point.alpha = 1, x.label = "Age", y.label = "Composite Cognitive Score", legend.main = "Female") + theme(axis.text.y = element_text(size = rel(1.5), hjust = 0.5), axis.text.x = element_text(size = rel(1.5), hjust = 0.5), axis.title = element_text(size = rel(1.5)))
 age_female_plot
-ggsave("age_female_plot.png", age_female_plot)
+suppressMessages(ggsave("age_female_plot.png", age_female_plot))
+```
+
+We now extracted the five-number summary statistics, along with number of observations and outliers for the boxplots to use it for our analysis, these tables were produced in LaTeX for the report.
+```{r boxplot-stats}
+stats_edu <- layer_data(edu_plot)
+edu_plot_data <- data.frame(
+  level = c("Secondary and Below", "Post-Secondary"),
+  min = stats_edu$ymin,
+  lower_q = stats_edu$lower,
+  median = stats_edu$middle,
+  upper_q = stats_edu$upper,
+  max = stats_edu$ymax,
+  n_obs = count(training_data %>% filter(edu != "Other") %>%
+    group_by(edu))[, 2],
+  n_out = lengths(stats_edu$outliers)
+)
+
+
+stats_chronic <- layer_data(chronic_plot)
+chronic_plot_data <- data.frame(
+  level = levels(working_data$chronic_mod),
+  min = stats_chronic$ymin,
+  lower_q = stats_chronic$lower,
+  median = stats_chronic$middle,
+  upper_q = stats_chronic$upper,
+  max = stats_chronic$ymax,
+  n_obs = count(training_data %>% group_by(chronic_mod))[, 2],
+  n_out = lengths(stats_chronic$outliers)
+)
+
+
+stats_eurod <- layer_data(eurod_plot)
+eurod_plot_data <- data.frame(
+  level = levels(working_data$eurod),
+  min = stats_eurod$ymin,
+  lower_q = stats_eurod$lower,
+  median = stats_eurod$middle,
+  upper_q = stats_eurod$upper,
+  max = stats_eurod$ymax,
+  n_obs = count(training_data %>% group_by(eurod))[, 2],
+  n_out = lengths(stats_eurod$outliers)
+)
+
+
+stats_vigact <- layer_data(vig_act_plot)
+vigact_plot_data <- data.frame(
+  level = levels(working_data$vig_act),
+  min = stats_vigact$ymin,
+  lower_q = stats_vigact$lower,
+  median = stats_vigact$middle,
+  upper_q = stats_vigact$upper,
+  max = stats_vigact$ymax,
+  n_obs = count(training_data %>% group_by(vig_act))[, 2],
+  n_out = lengths(stats_vigact$outliers)
+)
+
+
+stats_iadlza <- layer_data(iadlza_plot)
+iadlza_plot_data <- data.frame(
+  level = levels(working_data$iadlza),
+  min = stats_iadlza$ymin,
+  lower_q = stats_iadlza$lower,
+  median = stats_iadlza$middle,
+  upper_q = stats_iadlza$upper,
+  max = stats_iadlza$ymax,
+  n_obs = count(training_data %>% group_by(iadlza))[, 2],
+  n_out = lengths(stats_iadlza$outliers)
+)
+
+
+knitr::kable(edu_plot_data)
+knitr::kable(chronic_plot_data)
+knitr::kable(eurod_plot_data)
+knitr::kable(vigact_plot_data)
+knitr::kable(iadlza_plot_data)
 ```
 
 
 # The Model
-
-```{r}
+## Defining the model
+The code chunk below defines the model using `lm()`, produces plots for checking the model assumptions, stores the model summary and confidence intervals of estimates and performs model checking. 
+Note: There were many interaction terms that we had initially chosen that were considered insignificant when carrying out model selection using AIC.
+```{r model}
 # Define model formula for response variable cogscore
-mod <- cogscore ~ age + female + native + loc + edu + outside_help + 
-  chronic_mod + life_quality + eurod + doc_vis + nursing + iadlza  + maxgrip + vig_act + job_situ + loc:outside_help + age:doc_vis + 
+mod <- cogscore ~ age + female + native + loc + edu + outside_help +
+  chronic_mod + life_quality + eurod + doc_vis + nursing + iadlza + maxgrip + vig_act + job_situ + loc:outside_help + age:doc_vis +
   nursing:iadlza
 
 # Define model
 fit <- lm(mod, data = training_data)
 
-# Display model assumptions through residuals 
+# Display model assumptions through residuals
 par(mfrow = c(2, 2))
 plot(fit)
 
-# Save the summary of the model along with confidence intervals for the coefficient estimates 
+# Save the summary of the model along with confidence intervals for the coefficient estimates
 fit_summary <- summary(fit)
 fit_intervals <- confint(fit)
 fit_summary
@@ -291,13 +408,15 @@ better_fit <- step(fit, trace = F)
 ```
 
 
+## Formatting table of key results from model summary to go into report
+In this section, we created a latex table containing the model coefficients summary, but included the confidence intervals instead of standard errors and t-values for each coefficient.
 ```{r}
 # Set up a table that can be exported through LaTeX for the report
-fit_summary_sign <- fit_summary$coefficients[ , 4]  # Pull out p-values
-fit_summary_stars <- NA                             # Named vector with significance stars
+fit_summary_sign <- fit_summary$coefficients[, 4] # Pull out p-values
+fit_summary_stars <- NA # Named vector with significance stars
 
 # Define how the symbols appear for different significance levels
-fit_summary_stars[fit_summary_sign < 0.1] <- "."  
+fit_summary_stars[fit_summary_sign < 0.1] <- "."
 fit_summary_stars[fit_summary_sign < 0.05] <- "*"
 fit_summary_stars[fit_summary_sign < 0.01] <- "**"
 fit_summary_stars[fit_summary_sign < 0.001] <- "***"
@@ -306,77 +425,95 @@ names(fit_summary_stars) <- names(fit_summary_sign)
 
 # Make a data frame of the summary for the model coefficients to be exported as a LaTeX table
 fit_df <- cbind(data.frame("Estimate" = fit_summary$coefficients[, 1]), data.frame("CI_lower" = fit_intervals[, 1], "CI_upper" = fit_intervals[, 2]), data.frame("p-value" = fit_summary$coefficients[, 4]), data.frame(Significance = fit_summary_stars))
-fit_rownames <- c("Intercept", "age", "female", "native", "loc_Town_rural", 
-                  "edu_Post_Secondary", "outside_help", 
-                  "chronic_mod1-3", "chronic_mod4-6", "chronic_mod7-10",
-                  "life_quality_Moderate", "life_quality_High", 
-                  "eurod_Somewhat_Depressed", "eurod_Relatively_Depressed",
-                  "eurod_Very_Depressed", "doc_vis_More_than_10",  
-                  "nursing", "iadlza_High_Difficulty", 
-                  "maxgrip_High", "vig_act_Rarely", "job_situ_Employed", 
-                  "job_situ_Unemployed", "job_situ_Sick_Disabled", 
-                  "job_situ_Homemaker", "job_situ_Other", 
-                  "loc_Town_rural:outside_help", 
-                  "age:doc_vis_More_than_10", "nursing:iadlza_High_Difficulty")
+fit_rownames <- c(
+  "Intercept", "age", "female", "native", "loc_Town_rural",
+  "edu_Post_Secondary", "outside_help",
+  "chronic_mod1-3", "chronic_mod4-6", "chronic_mod7-10",
+  "life_quality_Moderate", "life_quality_High",
+  "eurod_Somewhat_Depressed", "eurod_Relatively_Depressed",
+  "eurod_Very_Depressed", "doc_vis_More_than_10",
+  "nursing", "iadlza_High_Difficulty",
+  "maxgrip_High", "vig_act_Rarely", "job_situ_Employed",
+  "job_situ_Unemployed", "job_situ_Sick_Disabled",
+  "job_situ_Homemaker", "job_situ_Other",
+  "loc_Town_rural:outside_help",
+  "age:doc_vis_More_than_10", "nursing:iadlza_High_Difficulty"
+)
 rownames(fit_df) <- fit_rownames
-xtable(fit_df)
+
+knitr::kable(fit_df)
 ```
 
+
+## Producing a forest plot to visualise key results from the model
 ```{r}
 # Make a forest plot to display key explanatory variables, their coefficient estimates and confidence intervals graphically.
 
 # Choose the key explanatory variables
-forest_names <- c("age", "female", "native", "loc_Town_rural", "edu_Post_Secondary",
-                  "outside_help", "iadlza_High_Difficulty", "vig_act_Rarely", 
-                  "age:doc_vis_More_than_10")           
+forest_names <- c(
+  "age", "female", "native", "loc_Town_rural", "edu_Post_Secondary",
+  "outside_help", "iadlza_High_Difficulty", "vig_act_Rarely",
+  "age:doc_vis_More_than_10"
+)
 
 # Construct a data frome for the forest plot with the relevant data
-forest_df <- data.frame(Variable = forest_names, 
-                             Estimate = round(fit_df[forest_names, 1], 2), 
-                             CI_lower = round(fit_df[forest_names, 2], 2), 
-                             CI_upper = round(fit_df[forest_names, 3], 2),
-                             p.value = round(fit_df[forest_names, 4], 2),
-                             Significance = fit_df[forest_names, 5]) 
+forest_df <- data.frame(
+  Variable = forest_names,
+  Estimate = round(fit_df[forest_names, 1], 2),
+  CI_lower = round(fit_df[forest_names, 2], 2),
+  CI_upper = round(fit_df[forest_names, 3], 2),
+  p.value = round(fit_df[forest_names, 4], 2),
+  Significance = fit_df[forest_names, 5]
+)
 
-# Plot and save the forest plot
-jpeg(filename = "Forestplot.jpeg", units = "in", width = 10, height = 7, res = 300)
-forest_df |> 
-  forestplot(labeltext = c(Variable, Estimate, Significance),
-  mean = Estimate, 
-  lower = CI_lower,
-  upper = CI_upper,
-  boxsize = 0.15, xlab = "Coefficient estimate value",
-  fn.ci_norm= "fpDrawCircleCI", 
-  colgap = unit(3, "mm"),
-  vertices = T,
-  cex = 1.4
+# Produce the forest plot
+forest_plot <- forest_df |>
+  forestplot(
+    labeltext = c(Variable, Estimate, Significance),
+    mean = Estimate,
+    lower = CI_lower,
+    upper = CI_upper,
+    boxsize = 0.15, xlab = "Coefficient estimate value",
+    fn.ci_norm = "fpDrawCircleCI",
+    colgap = unit(3, "mm"),
+    vertices = T,
+    cex = 1.4
   ) |>
-  fp_set_style(lines = "red", box = "black", 
-               align = "rrc",
-               txt_gp = fpTxtGp(xlab = gpar(cex = 1), 
-                                ticks = gpar(cex = 1))) |>
-  fp_add_header(Estimate = "Estimate", Variable = "Variables",  Significance = "Significance") |>
+  fp_set_style(
+    lines = "red", box = "black",
+    align = "rrc",
+    txt_gp = fpTxtGp(
+      xlab = gpar(cex = 1),
+      ticks = gpar(cex = 1)
+    )
+  ) |>
+  fp_add_header(Estimate = "Estimate", Variable = "Variables", Significance = "Significance") |>
   fp_add_lines() |>
   fp_set_zebra_style("#EFEFEF")
-dev.off()
+forest_plot
 
+# Save the forest plot for the report
+jpeg(filename = "Forestplot.jpeg", units = "in", width = 10, height = 7, res = 300)
+forest_plot
+dev.off() 
 ```
 
 
 # Model assessment 
+
+## Computing RMSE scores for the main model
+The RMSE scores were computed in this section for the 4 sets of test data and were also computed for a minimal model where cognitive score depended on age alone. This was done in order to assess the importance of the variables chosen for our model. A function `scores_rmse` was defined to take a `model` and compute the RMSE scores when the model is applied to a `test data` set. 
 ```{r set-up-scores}
 # Define a function that computes the scores of a given model with given test data
-scores_se <- function(model, test_data) {
-  
+scores_rmse <- function(model, test_data) {
   # Find the predicted values for cogscore of each observation
-  predicted_vals <- predict(model, newdata = test_data) 
-  
+  predicted_vals <- predict(model, newdata = test_data)
+
   # Compute the square root of the mean of the squared prediction errors
   se_scores <- (predicted_vals - test_data$cogscore)**2
   rmse_score <- sqrt(mean(se_scores))
-  
-  rmse_score      # Return the root mean squared error
-  
+
+  rmse_score # Return the root mean squared error
 }
 
 # Choose 4 different test datasets
@@ -388,30 +525,31 @@ test1_data <- training_data
 test2_data <- removed_data
 
 # Test data is same wave (4) different country (Austria)
-test3_data <- na.omit(data %>% 
-  filter(wave == 4, country_name == "Austria") %>% 
+test3_data <- na.omit(data %>%
+  filter(wave == 4, country_name == "Austria") %>%
   select(all_of(variable_list), "cogscore"))
 
 # Test data is same country (Estonia) different wave (6)
-test4_data <- na.omit(data %>% 
-  filter(wave == 6, country_name == "Estonia") %>% 
+test4_data <- na.omit(data %>%
+  filter(wave == 6, country_name == "Estonia") %>%
   select(all_of(variable_list), "cogscore"))
 ```
 
 ```{r calc-scores}
 # Compute the scores for the main model using the different sets of test data
-test1_scores <- scores_se(model = fit, test_data = test1_data)
-test2_scores <- scores_se(model = fit, test_data = test2_data)
-test3_scores <- scores_se(model = fit, test_data = test3_data)
-test4_scores <- scores_se(model = fit, test_data = test4_data)
-
+test1_scores <- scores_rmse(model = fit, test_data = test1_data)
+test2_scores <- scores_rmse(model = fit, test_data = test2_data)
+test3_scores <- scores_rmse(model = fit, test_data = test3_data)
+test4_scores <- scores_rmse(model = fit, test_data = test4_data)
 ```
 
-```{r}
+
+##  Computing RMSE scores for the minimal model
+```{r min-mod-scores}
 # Define minimal model of cogscore depending on age to compare scores with the main model
 min_mod <- cogscore ~ age
 
-# Define model 
+# Define model
 min_fit <- lm(min_mod, data = training_data)
 
 # Display model assumptions through residuals
@@ -419,28 +557,39 @@ par(mfrow = c(2, 2))
 plot(min_fit)
 
 # Compute scores for the minimal model using the different sets of test data
-test1_scores_min_mod <- scores_se(model = min_fit, test_data = test1_data)
-test2_scores_min_mod <- scores_se(model = min_fit, test_data = test2_data)
-test3_scores_min_mod <- scores_se(model = min_fit, test_data = test3_data)
-test4_scores_min_mod <- scores_se(model = min_fit, test_data = test4_data)
+test1_scores_min_mod <- scores_rmse(model = min_fit, test_data = test1_data)
+test2_scores_min_mod <- scores_rmse(model = min_fit, test_data = test2_data)
+test3_scores_min_mod <- scores_rmse(model = min_fit, test_data = test3_data)
+test4_scores_min_mod <- scores_rmse(model = min_fit, test_data = test4_data)
 ```
+## Producing a table to compare scores across data sets for both models
+A LaTeX table was produced to compare the RMSE scores for the 4 choices of test data and to compare the main model we defined to the minimal model.
 
-
-
-```{r}
+```{r scores-table}
 # Create a data frame of the scores for each of the test data for both models to be exported in LaTeX
 
 scores <- data.frame(
   "Scores of Main model" = c(test1_scores, test2_scores, test3_scores, test4_scores),
-  "Scores of Minimal model" = c(test1_scores_min_mod, test2_scores_min_mod, test3_scores_min_mod, test4_scores_min_mod))
-
+  "Scores of Minimal model" = c(test1_scores_min_mod, test2_scores_min_mod, test3_scores_min_mod, test4_scores_min_mod)
+)
 rownames(scores) <- c("Test 1", "Test 2", "Test 3", "Test 4")
 
-xtable(scores)
+knitr::kable(scores)
 ```
 
+## LaTeX tables
+This section contains code for generating all the LaTeX tables used in our report.
+```{r, include = FALSE}
+# All captions, labels and other aspects for these tables were further formatted on the LaTeX document
+xtable(summary(training_data %>% select("cogscore", "age", "job_situ", "chronic_mod", "edu", "life_quality")))
+xtable(summary(training_data %>% select(c(all_of(binary_list), "loc", "maxgrip", "iadlza"))))
+xtable(summary(training_data %>% select(c("doc_vis", "vig_act"))))
+xtable(edu_plot_data, caption = "Level of education completed")
+xtable(chronic_plot_data, caption = "Number of Chronic diseases")
+xtable(eurod_plot_data, caption = "Depression scale EURO-D")
+xtable(vigact_plot_data, caption = "Frequency of vigorous activities")
+xtable(iadlza_plot_data, "Instrumental activities of daily living indices")
+xtable(fit_df, caption = "Key results from model summary")
+xtable(scores, caption = "Table to compare RMSE scores across the four data sets for each model")
+```
 
-
-
-# Todo
-prediction errors 
